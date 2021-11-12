@@ -33,7 +33,7 @@ def list_shows(type):
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
-@plugin.route('/list_movies/<type>')	
+@plugin.route('/list_movies/<type>')
 def list_movies(type):
     xbmcplugin.setContent(plugin.handle, 'tvshows')
     soup = get_page(_baseurl+'filmy/zanry')
@@ -90,7 +90,7 @@ def list_recent():
 @plugin.route('/get_list/')
 def get_list():
     xbmcplugin.setContent(plugin.handle, 'episodes')
-    listing = []  
+    listing = []
     url = plugin.args['show_url'][0]
     category = plugin.args['category'][0]
     if category == 'False':
@@ -164,7 +164,7 @@ def get_video(url):
                 list_item.setPath(stream_data['src'])
                 list_item.setContentLookup(False)
                 list_item.setMimeType('application/xml+dash')
-                list_item.setProperty('inputstream', 'inputstream.adaptive')
+                list_item.setProperty('inputstreamaddon', 'inputstream.adaptive')
                 list_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
                 if 'drm' in stream_data:
                     drm = stream_data['drm'][1]
@@ -204,7 +204,7 @@ def get_session():
 	else:
 		s = make_login(s)
 	return s
-	
+
 def test_auth(s):
 	r = s.get('https://crm.cms.nova.cz/api/v1/users/login-check', headers={'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'})
 	try:
@@ -251,7 +251,7 @@ def performCredentialCheck():
 		_addon.setSetting(id='password', value=pswd)
 
 	return True
-	
+
 @plugin.route('/')
 def root():
 
@@ -259,20 +259,20 @@ def root():
 		os.mkdir(_profile)
 	except OSError:
 		print ("Folder already exists.")
-    
+
 	listing = []
 	list_item = xbmcgui.ListItem('Pořady')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
 	listing.append((plugin.url_for(list_shows, 0), list_item, True))
-	
+
 	list_item = xbmcgui.ListItem('Seriály')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
 	listing.append((plugin.url_for(list_serials, 0), list_item, True))
-	
+
 	list_item = xbmcgui.ListItem('Filmy')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_movies, 0), list_item, True))	
-	
+	listing.append((plugin.url_for(list_movies, 0), list_item, True))
+
 	xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
 	xbmcplugin.endOfDirectory(plugin.handle)
 
