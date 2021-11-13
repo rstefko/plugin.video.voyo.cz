@@ -21,7 +21,7 @@ _baseurl = 'https://voyo.nova.cz/'
 @plugin.route('/list_shows/<type>')
 def list_shows(type):
     xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'porady/zanry')
+    soup = get_page(_baseurl+'porady/zanry/'+type)
     listing = []
     articles = soup.find_all('div', {'class': 'c-video-box'})
     for article in articles:
@@ -30,13 +30,28 @@ def list_shows(type):
         list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
         list_item.setArt({'poster': article.div.img['data-src']})
         listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
+    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
+    xbmcplugin.endOfDirectory(plugin.handle)
+
+@plugin.route('/list_shows_types/<type>')
+def list_shows_types(type):
+    listing = []
+    serials = {'39-akcni': 'Akční', '8-dokumentarni': 'Dokumentární', '35-drama': 'Drama', '12-hudebni': 'Hudební',
+        '10-komedialni': 'Komediální', '16-kriminalni': 'Kriminální', '11-kulinarsky': 'Kulinářský', '5-magazin': 'Magazín',
+        '1-nova-plus-originals': 'Nova Plus Originals', '7-publicisticky': 'Publicistický', '30-reality-show': 'Reality Show',
+        '2-rodinny': 'Rodinný', '3-romanticky': 'Romantický', '54-soutez': 'Soutěž', '15-soutezni': 'Soutěžný',
+        '4-spolecensky': 'Společenský', '18-talk-show': 'Talk Show', '13-zabavny': 'Zábavný', '6-zpravodajsky': 'Zpravodajský'}
+    for k, v in serials.items():
+        list_item = xbmcgui.ListItem(v)
+        list_item.setArt({'icon': 'DefaultTVShows.png'})
+        listing.append((plugin.url_for(list_shows, k), list_item, True))
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
 @plugin.route('/list_movies/<type>')
 def list_movies(type):
     xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'filmy/zanry')
+    soup = get_page(_baseurl+'filmy/zanry/'+type)
     listing = []
     articles = soup.find_all('div', {'class': 'c-video-box'})
     for article in articles:
@@ -48,10 +63,27 @@ def list_movies(type):
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
+@plugin.route('/list_movies_types/<type>')
+def list_movies_types(type):
+    listing = []
+    serials = {'39-akcni': 'Akční', '29-animovany': 'Animovaný', '44-ceske-filmy': 'České filmy', '28-detsky': 'Dětský',
+        '41-dobrodruzny': 'Dobrodružný', '8-dokumentarni': 'Dokumentární', '35-drama': 'Drama', '38-fantasy': 'Fantasy',
+        '50-film-o-filmu': 'Film o filmu', '27-historicky': 'Historický', '42-horor': 'Horor', '12-hudebni': 'Hudební',
+        '10-komedialni': 'Komediální', '16-kriminalni': 'Kriminální', '52-mysteriozni': 'Mysteriózní', '21-pohadka': 'Pohádka',
+        '53-psychologicky': 'Psychologický', '2-rodinny': 'Rodinný', '3-romanticky': 'Romantický', '36-sci-fi': 'Sci-fi',
+        '15-soutezni': 'Soutěžný', '57-sportovni': 'Sportovní', '37-thriller': 'Thriller', '40-valecny': 'Válečný',
+        '43-western': 'Western', '49-zivotopisny': 'Životopisný'}
+    for k, v in serials.items():
+        list_item = xbmcgui.ListItem(v)
+        list_item.setArt({'icon': 'DefaultTVShows.png'})
+        listing.append((plugin.url_for(list_movies, k), list_item, True))
+    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
+    xbmcplugin.endOfDirectory(plugin.handle)
+
 @plugin.route('/list_serials/<type>')
 def list_serials(type):
     xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'serialy/zanry')
+    soup = get_page(_baseurl+'serialy/zanry/'+type)
     listing = []
     articles = soup.find_all('div', {'class': 'c-video-box'})
     for article in articles:
@@ -60,6 +92,19 @@ def list_serials(type):
         list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
         list_item.setArt({'poster': article.div.img['data-src']})
         listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
+    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
+    xbmcplugin.endOfDirectory(plugin.handle)
+
+@plugin.route('/list_serials_types/<type>')
+def list_serials_types(type):
+    listing = []
+    serials = {'39-akcni': 'Akční', '14-detektivni': 'Detektivní', '41-dobrodruzny': 'Dobrodružný', '35-drama': 'Drama',
+        '27-historicky': 'Historický', '10-komedialni': 'Komediální', '16-kriminalni': 'Kriminální', '2-rodinny': 'Rodinný',
+        '3-romanticky': 'Romantický', '37-thriller': 'Thriller', '13-zabavny': 'Zábavný'}
+    for k, v in serials.items():
+        list_item = xbmcgui.ListItem(v)
+        list_item.setArt({'icon': 'DefaultTVShows.png'})
+        listing.append((plugin.url_for(list_serials, k), list_item, True))
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
@@ -263,15 +308,15 @@ def root():
 	listing = []
 	list_item = xbmcgui.ListItem('Pořady')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_shows, 0), list_item, True))
+	listing.append((plugin.url_for(list_shows_types, 0), list_item, True))
 
 	list_item = xbmcgui.ListItem('Seriály')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_serials, 0), list_item, True))
+	listing.append((plugin.url_for(list_serials_types, 0), list_item, True))
 
 	list_item = xbmcgui.ListItem('Filmy')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_movies, 0), list_item, True))
+	listing.append((plugin.url_for(list_movies_types, 0), list_item, True))
 
 	xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
 	xbmcplugin.endOfDirectory(plugin.handle)
