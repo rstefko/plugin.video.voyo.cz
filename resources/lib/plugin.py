@@ -190,7 +190,7 @@ def get_video(url):
     source_type = _addon.getSetting('source_type')
     soup = get_page(url)
     desc = soup.find('meta', {'name':'description'})['content'].encode('utf-8')
-    showtitle = soup.find('h2', {'class':'subtitle'}).find('a').get_text().encode('utf-8')
+    showtitle = soup.find('div', {'class':'sub-title'}).find('h2', {'class':'text'}).find('a').get_text().encode('utf-8')
     title = soup.find('h1', {'class':'title'}).get_text().encode('utf-8')
     embeded = get_page(soup.find('div', {'class':'c-player-wrap'}).find('iframe')['src']).find_all('script')[-1]
     json_data = json.loads(re.compile('{\"tracks\":(.+?),\"duration\"').findall(str(embeded))[0])
