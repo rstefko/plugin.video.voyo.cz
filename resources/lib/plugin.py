@@ -19,6 +19,21 @@ plugin = routing.Plugin()
 
 _baseurl = 'https://voyo.nova.cz/'
 
+@plugin.route('/list_favorites/')
+def list_favorites():
+    xbmcplugin.setContent(plugin.handle, 'tvshows')
+    soup = get_page(_baseurl+'oblibene/')
+    listing = []
+    articles = soup.find_all('article', {'class': 'c-video-box'})
+    for article in articles:
+        title = article.h3.a.contents[0].encode('utf-8')
+        list_item = xbmcgui.ListItem(label=title)
+        list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
+        list_item.setArt({'poster': article.div.img['data-src']})
+        listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
+    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
+    xbmcplugin.endOfDirectory(plugin.handle)
+
 @plugin.route('/list_shows/<type>')
 def list_shows(type):
     xbmcplugin.setContent(plugin.handle, 'tvshows')
@@ -318,6 +333,10 @@ def root():
 	list_item = xbmcgui.ListItem('Filmy')
 	list_item.setArt({'icon': 'DefaultTVShows.png'})
 	listing.append((plugin.url_for(list_movies_types, 0), list_item, True))
+
+	list_item = xbmcgui.ListItem('Oblíbené')
+	list_item.setArt({'icon': 'DefaultTVShows.png'})
+	listing.append((plugin.url_for(list_favorites), list_item, True))
 
 	xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
 	xbmcplugin.endOfDirectory(plugin.handle)
