@@ -163,7 +163,7 @@ def get_list():
         showtitle = plugin.args['showtitle'][0].encode('utf-8')
     else:
         showtitle = soup.find('h1', 'title').get_text().encode('utf-8')
-    articles = soup.find_all('article', 'c-video-box -media')
+    articles = soup.find_all('article', 'c-video-box -media -alt')
     count = 0
     for article in articles:
         title = article.h3.a.contents[0]
