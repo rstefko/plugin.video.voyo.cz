@@ -26,7 +26,7 @@ def list_favorites():
     listing = []
     articles = soup.find_all('article', {'class': 'c-video-box'})
     for article in articles:
-        title = article.h3.a.contents[0].encode('utf-8')
+        title = article.h3.a.contents[0].encode('utf-8').strip()
         list_item = xbmcgui.ListItem(label=title)
         list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
         list_item.setArt({'poster': article.div.img['data-src']})
@@ -143,7 +143,7 @@ def list_recent():
         list_item.setArt({'icon': article.find('img', {'class':'e-image'})['data-original']})
         list_item.setProperty('IsPlayable', 'true')
         list_item.addContextMenuItems(menuitems)
-        listing.append((plugin.url_for(get_video, article.find('a')['href']), list_item, False))
+        listing.append((plugin.url_for(get_video, url = article.find('a')['href']), list_item, False))
 
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
@@ -169,13 +169,20 @@ def get_list():
         title = article.h3.a.contents[0]
         dur = article.find('span', {'class':'e-duration'})
         if dur:
-        	dur = get_duration(dur.get_text())
+            dur = get_duration(dur.get_text())
         list_item = xbmcgui.ListItem(title)
         list_item.setInfo('video', {'mediatype': 'episode', 'tvshowtitle': showtitle, 'title': title, 'duration': dur})
         list_item.setArt({'thumb': article.img['data-src']})
         list_item.setProperty('IsPlayable', 'true')
-        listing.append((plugin.url_for(get_video, article.h3.a['href']), list_item, False))
+        listing.append((plugin.url_for(get_video, url = article.h3.a['href']), list_item, False))
         count +=1
+    if count == 0:
+        url = plugin.args['show_url'][0]
+        title = plugin.args['showtitle'][0]
+        list_item = xbmcgui.ListItem(title)
+        list_item.setInfo('video', {'mediatype': 'movide', 'title': title})
+        list_item.setProperty('IsPlayable', 'true')
+        listing.append((plugin.url_for(get_video, url = url + '#player-fullscreen'), list_item, False))
     next = soup.find('div', {'class': 'load-more'})
     if next:
         list_item = xbmcgui.ListItem(label=_addon.getLocalizedString(30004))
@@ -198,20 +205,24 @@ def get_category():
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
-@plugin.route('/get_video/<path:url>')
-def get_video(url):
+@plugin.route('/get_video/')
+def get_video():
+    url = plugin.args['url'][0]
     PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
     source_type = _addon.getSetting('source_type')
     soup = get_page(url)
     desc = soup.find('meta', {'name':'description'})['content'].encode('utf-8')
-    showtitle = soup.find('div', {'class':'sub-title'}).find('h2', {'class':'text'}).find('a').get_text().encode('utf-8')
+    try:
+        showtitle = soup.find('div', {'class':'sub-title'}).find('h2', {'class':'text'}).find('a').get_text().encode('utf-8')
+    except:
+        showtitle = ''
     title = soup.find('h1', {'class':'title'}).get_text().encode('utf-8')
     embeded = get_page(soup.find('div', {'class':'c-player-wrap'}).find('iframe')['src']).find_all('script')[-1]
     json_data = json.loads(re.compile('{\"tracks\":(.+?),\"duration\"').findall(str(embeded))[0])
 
     if json_data:
-        print (json_data)
+        xbmc.log(str(json_data))
         stream_data = json_data[source_type][0]
         list_item = xbmcgui.ListItem()
         list_item.setInfo('video', {'mediatype': 'episode', 'tvshowtitle': showtitle, 'title': title, 'plot' : desc})
@@ -221,7 +232,7 @@ def get_video(url):
             is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
             if is_helper.check_inputstream():
                 stream_data = json_data['DASH'][0]
-                print(stream_data['type'])
+                xbmc.log(stream_data['type'])
                 list_item.setPath(stream_data['src'])
                 list_item.setContentLookup(False)
                 list_item.setMimeType('application/xml+dash')
