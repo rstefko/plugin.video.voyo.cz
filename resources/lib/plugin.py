@@ -143,7 +143,7 @@ def list_recent():
         list_item.setArt({'icon': article.find('img', {'class':'e-image'})['data-original']})
         list_item.setProperty('IsPlayable', 'true')
         list_item.addContextMenuItems(menuitems)
-        listing.append((plugin.url_for(get_video, url = article.find('a')['href']), list_item, False))
+        listing.append((plugin.url_for(get_video, article.find('a')['href']), list_item, False))
 
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
@@ -174,7 +174,7 @@ def get_list():
         list_item.setInfo('video', {'mediatype': 'episode', 'tvshowtitle': showtitle, 'title': title, 'duration': dur})
         list_item.setArt({'thumb': article.img['data-src']})
         list_item.setProperty('IsPlayable', 'true')
-        listing.append((plugin.url_for(get_video, url = article.h3.a['href']), list_item, False))
+        listing.append((plugin.url_for(get_video, article.h3.a['href']), list_item, False))
         count +=1
     if count == 0:
         url = plugin.args['show_url'][0]
@@ -182,7 +182,7 @@ def get_list():
         list_item = xbmcgui.ListItem(title)
         list_item.setInfo('video', {'mediatype': 'movide', 'title': title})
         list_item.setProperty('IsPlayable', 'true')
-        listing.append((plugin.url_for(get_video, url = url + '#player-fullscreen'), list_item, False))
+        listing.append((plugin.url_for(get_video, url + '#player-fullscreen'), list_item, False))
     next = soup.find('div', {'class': 'load-more'})
     if next:
         list_item = xbmcgui.ListItem(label=_addon.getLocalizedString(30004))
@@ -205,9 +205,8 @@ def get_category():
     xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
     xbmcplugin.endOfDirectory(plugin.handle)
 
-@plugin.route('/get_video/')
-def get_video():
-    url = plugin.args['url'][0]
+@plugin.route('/get_video/<path:url>')
+def get_video(url):
     PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
     source_type = _addon.getSetting('source_type')
