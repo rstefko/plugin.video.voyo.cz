@@ -1,286 +1,344 @@
-# -*- coding: utf-8 -*-
+import uuid
 import routing
+import re
+import requests
+import json
+import os
 import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
-import re
-from bs4 import BeautifulSoup
-import requests
 import inputstreamhelper
-import json
-import pickle
-import os
 
-_addon = xbmcaddon.Addon()
-_profile = xbmc.translatePath( _addon.getAddonInfo('profile'))
+addon = xbmcaddon.Addon()
+profile = xbmc.translatePath(addon.getAddonInfo('profile'))
 plugin = routing.Plugin()
 
-_baseurl = 'https://voyo.nova.cz/'
-
-@plugin.route('/list_shows/<type>')
-def list_shows(type):
-    xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'porady/zanry')
-    listing = []
-    articles = soup.find_all('div', {'class': 'c-video-box'})
-    for article in articles:
-        title = article.h3.a.contents[0].encode('utf-8')
-        list_item = xbmcgui.ListItem(label=title)
-        list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
-        list_item.setArt({'poster': article.div.img['data-src']})
-        listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/list_movies/<type>')	
-def list_movies(type):
-    xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'filmy/zanry')
-    listing = []
-    articles = soup.find_all('div', {'class': 'c-video-box'})
-    for article in articles:
-        title = article.h3.a.contents[0].encode('utf-8')
-        list_item = xbmcgui.ListItem(label=title)
-        list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
-        list_item.setArt({'poster': article.div.img['data-src']})
-        listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/list_serials/<type>')
-def list_serials(type):
-    xbmcplugin.setContent(plugin.handle, 'tvshows')
-    soup = get_page(_baseurl+'serialy/zanry')
-    listing = []
-    articles = soup.find_all('div', {'class': 'c-video-box'})
-    for article in articles:
-        title = article.h3.a.contents[0].encode('utf-8')
-        list_item = xbmcgui.ListItem(label=title)
-        list_item.setInfo('video', {'mediatype': 'tvshow', 'title': title})
-        list_item.setArt({'poster': article.div.img['data-src']})
-        listing.append((plugin.url_for(get_list, category = False, show_url = article.h3.a['href'], showtitle = title), list_item, True))
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/list_recent/')
-def list_recent():
-    xbmcplugin.setContent(plugin.handle, 'episodes')
-    soup = get_page(_baseurl)
-    listing = []
-    articles = soup.find('section', {'class':'b-main-section b-section-articles my-5'}).find_all('article', {'class':'b-article b-article-no-labels'})
-    for article in articles:
-        menuitems = []
-        title = article.find('span', {'class':'e-text'}).get_text()
-        dur = article.find('span', {'class':'e-duration'})
-        show_url = re.compile('(.+)\/.+\/').findall(article.find('a')['href'])[0]
-        menuitems.append(( _addon.getLocalizedString(30005), 'XBMC.Container.Update('+plugin.url_for(get_list, category = False, show_url = show_url)+')' ))
-        if dur:
-            dur = get_duration(article.find('span', {'class':'e-duration'}).get_text())
-        list_item = xbmcgui.ListItem(label = title)
-        list_item.setInfo('video', {'mediatype': 'episode', 'title': title, 'duration': dur})
-        list_item.setArt({'icon': article.find('img', {'class':'e-image'})['data-original']})
-        list_item.setProperty('IsPlayable', 'true')
-        list_item.addContextMenuItems(menuitems)
-        listing.append((plugin.url_for(get_video, article.find('a')['href']), list_item, False))
-
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/get_list/')
-def get_list():
-    xbmcplugin.setContent(plugin.handle, 'episodes')
-    listing = []  
-    url = plugin.args['show_url'][0]
-    category = plugin.args['category'][0]
-    if category == 'False':
-        list_item = xbmcgui.ListItem(label=_addon.getLocalizedString(30007))
-        listing.append((plugin.url_for(get_category, show_url = url), list_item, True))
-        url = plugin.args['show_url'][0]+'/cele-dily'
-    soup = get_page(url)
-    if 'showtitle' in plugin.args:
-        showtitle = plugin.args['showtitle'][0].encode('utf-8')
-    else:
-        showtitle = soup.find('h1', 'title').get_text().encode('utf-8')
-    articles = soup.find_all('article', 'c-video-box -media')
-    count = 0
-    for article in articles:
-        title = article.h3.a.contents[0]
-        dur = article.find('span', {'class':'e-duration'})
-        if dur:
-        	dur = get_duration(dur.get_text())
-        list_item = xbmcgui.ListItem(title)
-        list_item.setInfo('video', {'mediatype': 'episode', 'tvshowtitle': showtitle, 'title': title, 'duration': dur})
-        list_item.setArt({'thumb': article.img['data-src']})
-        list_item.setProperty('IsPlayable', 'true')
-        listing.append((plugin.url_for(get_video, article.h3.a['href']), list_item, False))
-        count +=1
-    next = soup.find('div', {'class': 'load-more'})
-    if next:
-        list_item = xbmcgui.ListItem(label=_addon.getLocalizedString(30004))
-        listing.append((plugin.url_for(get_list, category = category, show_url = next.find('button')['data-href'], showtitle = showtitle), list_item, True))
-
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/get_catogory/')
-def get_category():
-    listing = []
-    soup = get_page(plugin.args['show_url'][0])
-    navs = soup.find('nav', 'navigation js-show-detail-nav')
-    if navs:
-        for nav in navs.find_all('a'):
-            list_item = xbmcgui.ListItem(nav['title'])
-            list_item.setInfo('video', {'mediatype': 'episode'})
-            listing.append((plugin.url_for(get_list, category = True, show_url = nav['href']), list_item, True))
-
-    xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
-    xbmcplugin.endOfDirectory(plugin.handle)
-
-@plugin.route('/get_video/<path:url>')
-def get_video(url):
-    PROTOCOL = 'mpd'
-    DRM = 'com.widevine.alpha'
-    source_type = _addon.getSetting('source_type')
-    soup = get_page(url)
-    desc = soup.find('meta', {'name':'description'})['content'].encode('utf-8')
-    showtitle = soup.find('h2', {'class':'subtitle'}).find('a').get_text().encode('utf-8')
-    title = soup.find('h1', {'class':'title'}).get_text().encode('utf-8')
-    embeded = get_page(soup.find('div', {'class':'c-player-wrap'}).find('iframe')['src']).find_all('script')[-1]
-    json_data = json.loads(re.compile('{\"tracks\":(.+?),\"duration\"').findall(str(embeded))[0])
-
-    if json_data:
-        print (json_data)
-        stream_data = json_data[source_type][0]
-        list_item = xbmcgui.ListItem()
-        list_item.setInfo('video', {'mediatype': 'episode', 'tvshowtitle': showtitle, 'title': title, 'plot' : desc})
-        if not 'drm' in stream_data and source_type == 'HLS':
-            list_item.setPath(stream_data['src'])
-        else:
-            is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
-            if is_helper.check_inputstream():
-                stream_data = json_data['DASH'][0]
-                print(stream_data['type'])
-                list_item.setPath(stream_data['src'])
-                list_item.setContentLookup(False)
-                list_item.setMimeType('application/xml+dash')
-                list_item.setProperty('inputstream', 'inputstream.adaptive')
-                list_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
-                if 'drm' in stream_data:
-                    drm = stream_data['drm'][1]
-                    list_item.setProperty('inputstream.adaptive.license_type', DRM)
-                    list_item.setProperty('inputstream.adaptive.license_key', drm['serverURL'] + '|' + 'X-AxDRM-Message=' + drm['headers'][0]['value'] + '|R{SSM}|')
-        xbmcplugin.setResolvedUrl(plugin.handle, True, list_item)
-    else:
-        xbmcgui.Dialog().notification(_addon.getAddonInfo('name'),_addon.getLocalizedString(30006), xbmcgui.NOTIFICATION_ERROR, 5000)
+baseUrl = 'https://apivoyo.cms.nova.cz/api/v1/'
+session = requests.session()
+token = ''
+deviceHeaders = {
+'X-DeviceType': 'mobile',
+'X-DeviceOS': 'Android',
+'X-DeviceOSVersion': '25',
+'X-DeviceManufacturer': 'Android',
+'X-DeviceModel': 'Kodi',
+'X-DeviceName': 'Kodi',
+}
 
 
-def get_duration(dur):
-    duration = 0
-    l = dur.strip().split(':')
-    for pos, value in enumerate(l[::-1]):
-        duration += int(value) * 60 ** pos
-    return duration
+def auth_session(username, password):
+	global token
+	login = json.dumps({ "username": username, "password": password })
+	headers = deviceHeaders.copy()
+	headers['Content-Type'] = "application/json; charset=UTF-8"
+	resp = session.post(url=baseUrl + "auth-sessions", data=login, 
+						headers=headers)
+	if not resp.ok:
+		raise PermissionError()
 
-def get_page(url):
-	s = get_session()
-	r = s.get(url, headers={'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'})
-	return BeautifulSoup(r.content, 'html.parser')
+	token = resp.json()['credentials']['accessToken']
 
-def get_session():
-	s = requests.session()
-	# Load cookies and test auth
-	cookie_file = _profile+"cookie"
-	cookie_file_exists = os.path.isfile(cookie_file)
-	if cookie_file_exists:
-		with open(cookie_file, 'rb') as f:
-			s.cookies.update(pickle.load(f))
-		auth = test_auth(s)
-		if auth == 0:
-			try:
-				os.remove(cookie_file)
-			except:
-				print ("File not found.")
-	else:
-		s = make_login(s)
-	return s
-	
-def test_auth(s):
-	r = s.get('https://crm.cms.nova.cz/api/v1/users/login-check', headers={'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'})
-	try:
-		if r.json()['data']['logged_in'] == True:
-			auth = 1
-	except KeyError:
-		auth = 0
-	return auth
+def login():
+	global token
+	token = None
+	deviceId = addon.getSetting(id='deviceId')
+	if not deviceId:
+		deviceId = str(uuid.uuid4())
+		addon.setSetting(id='deviceId', value=deviceId)
 
-def make_login(s):
-	cookie_file = _profile+"cookie"
-	username = xbmcplugin.getSetting(plugin.handle, 'username')
-	password = xbmcplugin.getSetting(plugin.handle, 'password')
-	data = {
-		'email': username,
-		'password': password,
-		'_do': 'content186-loginForm-form-submit'
+	x_device_id = { 'X-Device-Id': deviceId }
+	deviceHeaders.update(x_device_id)
+
+	addon.setSetting(id='accessToken', value=None)
+
+	username = addon.getSetting('username')
+	password = addon.getSetting('password')
+
+	logged_in = False
+	while not logged_in:
+		if not username or not password:
+			registration_notice = xbmcgui.Dialog()
+			registration_notice.ok('VOYO účet', 'Pro přehrávání pořadů je potřeba účet s aktivním předplatným na voyo.nova.cz\n\nPokud účet ještě nemáte, zaregistrujte se na voyo.nova.cz, předplaťte účet na měsíc nebo rok a v dalším okně vyplňte přihlašovací údaje.')
+
+			username_prompt = xbmcgui.Dialog()
+			username = username_prompt.input('Uživatel (e-mail)')
+
+			if not username:
+				raise PermissionError()
+			addon.setSetting(id='username', value=username)
+
+			password_prompt = xbmcgui.Dialog()
+			password = password_prompt.input('Heslo', option=xbmcgui.ALPHANUM_HIDE_INPUT)
+
+			if not password:
+				raise PermissionError()
+			addon.setSetting(id='password', value=password)
+
+		try:
+			print(f'{username} {password}')
+			auth_session(username, password)
+			print(f'logged in')
+			logged_in = True
+			addon.setSetting(id='accessToken', value=token)
+		except PermissionError:
+			registration_notice.ok('VOYO účet', 'Neplatné přístupové údaje, zkuste zadat znovu')
+			username = None
+			password = None
+
+def get_request(url, method='GET'):
+	global token
+	headers = deviceHeaders.copy()
+	headers['Authorization'] = "Bearer " + token;
+	return session.request(method=method, url=baseUrl + url, headers=headers)
+
+def get(url, method='GET'):
+	global token
+	token = addon.getSetting('accessToken')
+	deviceId = addon.getSetting('deviceId')
+		
+	if not token or not deviceId:
+		login()
+
+	resp = get_request(url, method)
+	if resp.status_code == 401:
+		login()
+		resp = get_request(url, method)
+
+	if not resp.ok:
+		print(resp.content)
+		if resp.status_code == 401:
+			raise PermissionError()
+		resp.raise_for_status()
+
+	return resp.json()
+
+def get_categories():
+	categories = []
+	jcategories = get('overview')['categories']
+	for jcat in jcategories:
+		jcatcat = jcat['category']
+		if jcatcat:
+			if jcatcat['name'] != 'Domů':
+				categories.append(
+					{ "id": jcatcat['id'],
+					  "title": jcatcat['name'],
+					  "type": jcatcat['type']
+					} )
+	return categories
+
+def list_category(id, page=1, sort='date-desc'):
+	items = []
+	jitems = get(f'content?category={id}&page={page}&sort={sort}')['items']
+	for jitem in jitems:
+		items.append(
+			{
+				"id": jitem['id'],
+				"title": jitem['title'],
+				"type": jitem['type'],
+				"imageTemplate": jitem['image']
+			})
+	return items
+
+def list_tvshow_seasons(id):
+	seasons = []
+	jseasons = get(f'tvshow/{id}')['seasons']
+	for jseason in jseasons:
+		seasons.append(
+			{
+				"id": jseason['id'],
+				"showId": id,
+				"title": jseason['name'],
+				"type": 'season'
+			})
+	return seasons
+
+def list_season_episodes(showId, seasonId):
+	episodes = []
+	jepisodes = get(f'tvshow/{showId}?season={seasonId}')['sections'][0]['content']
+	for jepisode in jepisodes:
+		episodes.append(
+			{
+				"id": jepisode['id'],
+				"type": jepisode['type'],
+				"imageTemplate": jepisode['image'],
+				"title": jepisode['title'],
+				"length": jepisode['stream']['length']
+			})
+	return episodes
+
+def list_live_channels(id):
+	items = []
+	jitems = get(f'overview?category={id}')['liveTvs']
+	for jitem in jitems:
+		items.append(
+			{
+				"id": jitem['id'],
+				"title": jitem['name'],
+				"type": 'livetv',
+				"imageTemplate": jitem['logo'],
+				"currentShow": jitem['currentlyPlaying']['title']
+			})
+	return items
+
+def get_content_info(id):
+	resp = get(f'content/{id}/plays?acceptVideo=hls%2cdash%2cdrm-widevine', method='POST')
+	content = resp['content']
+	result = {
+		"id": id,
+		"type": content['type'],
+		"imageTemplate": content['image'],
+		"title": content['title'],
+		"showTitle": content['parentShowTitle'],
+		"description": content['description'],
+		"videoUrl": resp['url'],
+		"videoType": resp['videoType'],
 	}
-	r = s.post('https://voyo.nova.cz/prihlaseni', headers={'User-Agent': 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'}, data=data)
-	with open(cookie_file, 'wb') as f:
-		pickle.dump(s.cookies, f)
-	return s
+	if resp['drm']:
+		drm = {
+			"drm": resp['drm']['keySystem'] ,
+			"licenseKey": resp['drm']['licenseRequestHeaders'][0]['value'],
+			"licenseUrl": resp['drm']['licenseUrl']
+		}
+		result.update(drm)
 
-def performCredentialCheck():
-	username = xbmcplugin.getSetting(plugin.handle, 'username')
-	password = xbmcplugin.getSetting(plugin.handle, 'password')
+	return result
 
-	if not username or not password:
-		registration_notice = xbmcgui.Dialog()
-		registration_notice.ok('VOYO účet', 'Pro přehrávání pořadů je potřeba účet s aktivním předplatným na voyo.nova.cz\n\nPokud účet ještě nemáte, zaregistrujte se na voyo.nova.cz, předplaťte účet na měsíc nebo rok a v dalším okně vyplňte přihlašovací údaje.')
+def get_thumb_url(url):
+	return url.replace('{WIDTH}', '100').replace('{HEIGHT}', '100')
 
-		username_prompt = xbmcgui.Dialog()
-		usr = username_prompt.input('Uživatel (e-mail)')
+def get_poster_url(url):
+	return url.replace('{WIDTH}', '900').replace('{HEIGHT}', '1200')
 
-		if not usr:
-			return False
-		_addon.setSetting(id='username', value=usr)
+def get_media_type(typ):
+	if typ == 'livechannel':
+		return 'video'
+	else:
+		return typ
 
-		password_prompt = xbmcgui.Dialog()
-		pswd = password_prompt.input('Heslo', option=xbmcgui.ALPHANUM_HIDE_INPUT)
+@plugin.route('/play_video/<id>')
+def play_video(id):
+	print(f'play_video {id}')
+	print(f'plugin.handle {plugin.handle}')
+	content = get_content_info(id)
+	if content['videoType'] == 'hls':
+		protocol = 'hls'
+	else:
+		protocol = 'mpd'
+	list_item = xbmcgui.ListItem()
+	list_item.setInfo('video', {
+						'mediatype': get_media_type(content['type']),
+						'title': content['title'],
+						'tvshowtitle': content['showTitle'],
+						'plot': content['description']
+	})
+	drm = content['drm'] if 'drm' in content else None
+	helper = inputstreamhelper.Helper(protocol, drm=drm)
+	if helper.check_inputstream():
+		print(content['videoUrl'])
+		list_item.setPath(content['videoUrl'])
+		list_item.setContentLookup(False)
+		if protocol == 'mpd':
+			list_item.setMimeType('application/xml+dash')
+		list_item.setProperty('inputstream', 'inputstream.adaptive')
+		list_item.setProperty('inputstream.adaptive.manifest_type', protocol)
+		if 'drm' in content:
+			list_item.setProperty('inputstream.adaptive.license_type', content['drm'])
+			list_item.setProperty('inputstream.adaptive.license_key',
+				content['licenseUrl'] + '|X-AxDRM-Message=' + content['licenseKey'] + '|R{SSM}|')
+	xbmcplugin.setResolvedUrl(plugin.handle, True, list_item)
 
-		if not pswd:
-			return False
-		_addon.setSetting(id='password', value=pswd)
 
-	return True
-	
-@plugin.route('/')
-def root():
-
-	try:
-		os.mkdir(_profile)
-	except OSError:
-		print ("Folder already exists.")
-    
-	listing = []
-	list_item = xbmcgui.ListItem('Pořady')
-	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_shows, 0), list_item, True))
-	
-	list_item = xbmcgui.ListItem('Seriály')
-	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_serials, 0), list_item, True))
-	
-	list_item = xbmcgui.ListItem('Filmy')
-	list_item.setArt({'icon': 'DefaultTVShows.png'})
-	listing.append((plugin.url_for(list_movies, 0), list_item, True))	
-	
-	xbmcplugin.addDirectoryItems(plugin.handle, listing, len(listing))
+@plugin.route('/tvshow/<id>/season/<season>')
+def season(id, season):	
+	episodes = list_season_episodes(id, season)
+	for item in episodes:
+		title = item['title']
+		item_id = item['id']
+		list_item = xbmcgui.ListItem(title)
+		list_item.setArt({'icon': 'DefaultTVShows.png'})
+		list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
+		list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
+		list_item.setProperty('IsPlayable', 'true')
+		dir_item = (plugin.url_for(play_video, item_id), list_item, False)
+		xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(episodes))
 	xbmcplugin.endOfDirectory(plugin.handle)
 
-def run():
-	credentialsAvailable = performCredentialCheck()
+@plugin.route('/tvshow/<id>')
+def tvshow(id):
+	seasons = list_tvshow_seasons(id)
+	for item in seasons:
+		title = item['title']
+		item_id = item['id']
+		list_item = xbmcgui.ListItem(title)
+		dir_item = (plugin.url_for(season, id, item_id), list_item, True)
+		xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(seasons))
+	xbmcplugin.endOfDirectory(plugin.handle)
 
-	if credentialsAvailable:
-		plugin.run()
-	else:
-		xbmc.executebuiltin("Action(Back,%s)" % xbmcgui.getCurrentWindowId())
-		sys.exit(1)
+@plugin.route('/category/<id>/<page>')
+def category(id, page):
+	page = int(page)
+	items = list_category(id, page)
+	for item in items:
+		item_id = item['id']
+		title = item['title']
+		typ = item['type']
+		list_item = xbmcgui.ListItem(title)
+		list_item.setArt({'thumb': get_thumb_url(item['imageTemplate'])})
+		list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
+		dir_item = None
+		print(typ)
+		if typ == 'movie':
+			list_item.setArt({'icon': 'DefaultTVShows.png'})
+			list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
+			list_item.setProperty('IsPlayable', 'true')
+			dir_item = (plugin.url_for(play_video, item_id), list_item, False)
+		elif typ == 'tvshow':
+			dir_item = (plugin.url_for(tvshow, item_id), list_item, True)
+		if dir_item:
+			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(items))
+
+	next_page_item = xbmcgui.ListItem('Další...')
+	next_page_dir_item = (plugin.url_for(category, id, page + 1), next_page_item, True)
+	xbmcplugin.addDirectoryItems(plugin.handle, [next_page_dir_item], 1)
+	xbmcplugin.endOfDirectory(plugin.handle)
+
+@plugin.route('/live_channels/<id>')
+def live_channels(id):
+	channels = list_live_channels(id)
+	for item in channels:
+		item_id = item['id']
+		title = item['title']
+		list_item = xbmcgui.ListItem(title)
+		list_item.setArt({'thumb': get_thumb_url(item['imageTemplate'])})
+		list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
+		list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
+		list_item.setProperty('IsPlayable', 'true')
+		dir_item = (plugin.url_for(play_video, item_id), list_item, False)
+		xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(channels))
+	xbmcplugin.endOfDirectory(plugin.handle)
+
+@plugin.route('/')
+def root():
+	try:
+		os.mkdir(profile)
+	except OSError:
+		pass
+
+	try:
+		categories = get_categories()
+		for cat in categories:
+			id = cat['id']
+			title = cat['title']
+			list_item = xbmcgui.ListItem(title)
+			if cat['type'] == 'live':
+				dir_item = (plugin.url_for(live_channels, id), list_item, True)
+			else:
+				dir_item = (plugin.url_for(category, id, 1), list_item, True)
+			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(categories))
+		xbmcplugin.endOfDirectory(plugin.handle)
+	except PermissionError:
+		print('error')
+
+def run():
+	plugin.run()
