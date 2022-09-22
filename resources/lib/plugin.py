@@ -77,9 +77,7 @@ def login():
 			addon.setSetting(id='password', value=password)
 
 		try:
-			print('{0} {1}'.format(username, password))
 			auth_session(username, password)
-			print('logged in')
 			logged_in = True
 			addon.setSetting(id='accessToken', value=token)
 		except PermissionError:
@@ -219,8 +217,6 @@ def get_media_type(typ):
 
 @plugin.route('/play_video/<id>')
 def play_video(id):
-	print('play_video {0}'.format(id))
-	print('plugin.handle {0}'.format(plugin.handle))
 	content = get_content_info(id)
 	if content['videoType'] == 'hls':
 		protocol = 'hls'
@@ -236,7 +232,6 @@ def play_video(id):
 	drm = content['drm'] if 'drm' in content else None
 	helper = inputstreamhelper.Helper(protocol, drm=drm)
 	if helper.check_inputstream():
-		print(content['videoUrl'])
 		list_item.setPath(content['videoUrl'])
 		list_item.setContentLookup(False)
 		if protocol == 'mpd':
@@ -288,7 +283,6 @@ def category(id, page):
 		list_item.setArt({'thumb': get_thumb_url(item['imageTemplate'])})
 		list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
 		dir_item = None
-		print(typ)
 		if typ == 'movie':
 			list_item.setArt({'icon': 'DefaultTVShows.png'})
 			list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
