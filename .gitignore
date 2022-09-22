@@ -1,0 +1,5 @@
+.vs/
+deploy.sh
+pub/
+resources/__pycache__/
+resources/lib/__pycache__/
