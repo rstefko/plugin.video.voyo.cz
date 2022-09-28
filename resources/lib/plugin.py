@@ -285,10 +285,7 @@ def tvshow(id):
 		xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(seasons))
 	xbmcplugin.endOfDirectory(plugin.handle)
 
-@plugin.route('/category/<id>/<page>')
-def category(id, page):
-	page = int(page)
-	items = list_category(id, page)
+def add_items(items):
 	for item in items:
 		item_id = item['id']
 		title = item['title']
@@ -307,6 +304,12 @@ def category(id, page):
 		if dir_item:
 			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(items))
 
+
+@plugin.route('/category/<id>/<page>')
+def category(id, page):
+	page = int(page)
+	items = list_category(id, page)
+	add_items(items)
 	next_page_item = xbmcgui.ListItem('Další...')
 	next_page_dir_item = (plugin.url_for(category, id, page + 1), next_page_item, True)
 	xbmcplugin.addDirectoryItems(plugin.handle, [next_page_dir_item], 1)
@@ -333,16 +336,7 @@ def search():
 	pattern = dlg.input('Název')
 	if pattern:
 		result = get_search_result(pattern)
-		for item in result:
-			item_id = item['id']
-			title = item['title']
-			list_item = xbmcgui.ListItem(title)
-			list_item.setArt({'thumb': get_thumb_url(item['imageTemplate'])})
-			list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
-			list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
-			list_item.setProperty('IsPlayable', 'true')
-			dir_item = (plugin.url_for(play_video, item_id), list_item, False)
-			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(result))
+		add_items(result)
 	xbmcplugin.endOfDirectory(plugin.handle)
 
 @plugin.route('/')
