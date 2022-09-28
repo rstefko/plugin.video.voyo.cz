@@ -30,10 +30,10 @@ deviceHeaders = {
 
 def auth_session(username, password):
 	global token
-	login = json.dumps({ "username": username, "password": password })
+	login = json.dumps({ 'username': username, 'password': password })
 	headers = deviceHeaders.copy()
-	headers['Content-Type'] = "application/json; charset=UTF-8"
-	resp = session.post(url=baseUrl + "auth-sessions", data=login, 
+	headers['Content-Type'] = 'application/json; charset=UTF-8'
+	resp = session.post(url=baseUrl + 'auth-sessions', data=login, 
 						headers=headers)
 	if not resp.ok:
 		raise PermissionError()
@@ -88,7 +88,7 @@ def login():
 def get_request(url, method='GET'):
 	global token
 	headers = deviceHeaders.copy()
-	headers['Authorization'] = "Bearer " + token;
+	headers['Authorization'] = 'Bearer ' + token;
 	return session.request(method=method, url=baseUrl + url, headers=headers)
 
 def get(url, method='GET'):
@@ -120,9 +120,9 @@ def get_categories():
 		if jcatcat:
 			if jcatcat['name'] != 'Domů':
 				categories.append(
-					{ "id": jcatcat['id'],
-					  "title": jcatcat['name'],
-					  "type": jcatcat['type']
+					{ 'id': jcatcat['id'],
+					  'title': jcatcat['name'],
+					  'type': jcatcat['type']
 					} )
 	return categories
 
@@ -132,10 +132,10 @@ def list_category(id, page=1, sort='date-desc'):
 	for jitem in jitems:
 		items.append(
 			{
-				"id": jitem['id'],
-				"title": jitem['title'],
-				"type": jitem['type'],
-				"imageTemplate": jitem['image']
+				'id': jitem['id'],
+				'title': jitem['title'],
+				'type': jitem['type'],
+				'imageTemplate': jitem['image']
 			})
 	return items
 
@@ -145,10 +145,10 @@ def list_tvshow_seasons(id):
 	for jseason in jseasons:
 		seasons.append(
 			{
-				"id": jseason['id'],
-				"showId": id,
-				"title": jseason['name'],
-				"type": 'season'
+				'id': jseason['id'],
+				'showId': id,
+				'title': jseason['name'],
+				'type': 'season'
 			})
 	return seasons
 
@@ -158,11 +158,11 @@ def list_season_episodes(showId, seasonId):
 	for jepisode in jepisodes:
 		episodes.append(
 			{
-				"id": jepisode['id'],
-				"type": jepisode['type'],
-				"imageTemplate": jepisode['image'],
-				"title": jepisode['title'],
-				"length": jepisode['stream']['length']
+				'id': jepisode['id'],
+				'type': jepisode['type'],
+				'imageTemplate': jepisode['image'],
+				'title': jepisode['title'],
+				'length': jepisode['stream']['length']
 			})
 	return episodes
 
@@ -172,11 +172,11 @@ def list_live_channels(id):
 	for jitem in jitems:
 		items.append(
 			{
-				"id": jitem['id'],
-				"title": jitem['name'],
-				"type": 'livetv',
-				"imageTemplate": jitem['logo'],
-				"currentShow": jitem['currentlyPlaying']['title']
+				'id': jitem['id'],
+				'title': jitem['name'],
+				'type': 'livetv',
+				'imageTemplate': jitem['logo'],
+				'currentShow': jitem['currentlyPlaying']['title']
 			})
 	return items
 
@@ -184,22 +184,37 @@ def get_content_info(id):
 	resp = get('content/{0}/plays?acceptVideo=hls%2cdash%2cdrm-widevine'.format(id), method='POST')
 	content = resp['content']
 	result = {
-		"id": id,
-		"type": content['type'],
-		"imageTemplate": content['image'],
-		"title": content['title'],
-		"showTitle": content['parentShowTitle'],
-		"description": content['description'],
-		"videoUrl": resp['url'],
-		"videoType": resp['videoType'],
+		'id': id,
+		'type': content['type'],
+		'imageTemplate': content['image'],
+		'title': content['title'],
+		'showTitle': content['parentShowTitle'],
+		'description': content['description'],
+		'videoUrl': resp['url'],
+		'videoType': resp['videoType'],
 	}
 	if resp['drm']:
 		drm = {
-			"drm": resp['drm']['keySystem'] ,
-			"licenseKey": resp['drm']['licenseRequestHeaders'][0]['value'],
-			"licenseUrl": resp['drm']['licenseUrl']
+			'drm': resp['drm']['keySystem'] ,
+			'licenseKey': resp['drm']['licenseRequestHeaders'][0]['value'],
+			'licenseUrl': resp['drm']['licenseUrl']
 		}
 		result.update(drm)
+
+	return result
+
+def get_search_result(pattern):
+	resp = get(f'search?query={pattern}')
+	result = []
+	for rg in resp['resultGroups']:
+		for jres in rg['results']:
+			content = jres['content']
+			result.append({
+				'id': content['id'],
+				'type': content['type'],
+				'imageTemplate': content['image'],
+				'title': content['title']
+				})
 
 	return result
 
@@ -313,6 +328,24 @@ def live_channels(id):
 		xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(channels))
 	xbmcplugin.endOfDirectory(plugin.handle)
 
+@plugin.route('/search')
+def search():
+	dlg = xbmcgui.Dialog()
+	pattern = dlg.input('Název')
+	if pattern:
+		result = get_search_result(pattern)
+		for item in result:
+			item_id = item['id']
+			title = item['title']
+			list_item = xbmcgui.ListItem(title)
+			list_item.setArt({'thumb': get_thumb_url(item['imageTemplate'])})
+			list_item.setArt({'poster': get_poster_url(item['imageTemplate'])})
+			list_item.setInfo('video', {'mediatype': get_media_type(item['type']), 'title': title})
+			list_item.setProperty('IsPlayable', 'true')
+			dir_item = (plugin.url_for(play_video, item_id), list_item, False)
+			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(result))
+	xbmcplugin.endOfDirectory(plugin.handle)
+
 @plugin.route('/')
 def root():
 	try:
@@ -331,6 +364,10 @@ def root():
 			else:
 				dir_item = (plugin.url_for(category, id, 1), list_item, True)
 			xbmcplugin.addDirectoryItems(plugin.handle, [dir_item], len(categories))
+
+		srch_list_item = xbmcgui.ListItem('Vyhledávání')
+		srch_dir_item = (plugin.url_for(search), srch_list_item, True)
+		xbmcplugin.addDirectoryItems(plugin.handle, [srch_dir_item], 1)
 		xbmcplugin.endOfDirectory(plugin.handle)
 	except PermissionError:
 		print('error')
