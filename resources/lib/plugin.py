@@ -255,7 +255,7 @@ def get_duration(dur):
 
 def get_page(url):
 	s = get_session()
-	r = s.get(url, headers={'User-Agent': 'User-Agent: ' + _userAgent})
+	r = s.get(url, headers={'User-Agent': _userAgent})
 	return BeautifulSoup(r.content, 'html.parser')
 
 def get_session():
@@ -277,7 +277,7 @@ def get_session():
 	return s
 
 def test_auth(s):
-	r = s.get('https://crm.cms.nova.cz/api/v1/users/login-check', headers={'User-Agent': 'User-Agent: ' + _userAgent})
+	r = s.get('https://crm.cms.nova.cz/api/v1/users/login-check', headers={'User-Agent': _userAgent})
 	try:
 		if r.json()['data']['logged_in'] == True:
 			auth = 1
@@ -294,7 +294,11 @@ def make_login(s):
 		'password': password,
 		'_do': 'content186-loginForm-form-submit'
 	}
-	r = s.post('https://voyo.nova.cz/prihlaseni', headers={'User-Agent': 'User-Agent: ' + _userAgent}, data=data)
+	headers = { 'User-Agent': _userAgent }
+    # First load page using get to initiate session on Voyo server
+	r = s.get('https://voyo.nova.cz/prihlaseni')
+    # Post data
+	r = s.post('https://voyo.nova.cz/prihlaseni', headers=headers, data=data)
 	with open(cookie_file, 'wb') as f:
 		pickle.dump(s.cookies, f)
 	return s
