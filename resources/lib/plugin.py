@@ -14,7 +14,7 @@ addon = xbmcaddon.Addon()
 profile = xbmc.translatePath(addon.getAddonInfo('profile'))
 plugin = routing.Plugin()
 
-baseUrl = 'https://apivoyo.cms.nova.cz/api/v1/'
+baseUrl = addon.getSetting('source') #'https://apivoyo.cms.nova.cz/api/v1/'
 session = requests.session()
 token = ''
 deviceHeaders = {
