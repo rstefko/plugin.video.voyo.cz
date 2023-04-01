@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import uuid
 import routing
 import re
@@ -76,9 +77,9 @@ def login():
 			addon.setSetting(id='password', value=password)
 
 		try:
-			print(f'{username} {password}')
+			print('{0} {1}'.format(username, password))
 			auth_session(username, password)
-			print(f'logged in')
+			print('logged in')
 			logged_in = True
 			addon.setSetting(id='accessToken', value=token)
 		except PermissionError:
@@ -129,7 +130,7 @@ def get_categories():
 
 def list_category(id, page=1, sort='date-desc'):
 	items = []
-	jitems = get(f'content?category={id}&page={page}&sort={sort}')['items']
+	jitems = get('content?category={0}&page={1}&sort={2}'.format(id, page, sort))['items']
 	for jitem in jitems:
 		items.append(
 			{
@@ -142,7 +143,7 @@ def list_category(id, page=1, sort='date-desc'):
 
 def list_tvshow_seasons(id):
 	seasons = []
-	jseasons = get(f'tvshow/{id}')['seasons']
+	jseasons = get('tvshow/{0}'.format(id))['seasons']
 	for jseason in jseasons:
 		seasons.append(
 			{
@@ -155,7 +156,7 @@ def list_tvshow_seasons(id):
 
 def list_season_episodes(showId, seasonId):
 	episodes = []
-	jepisodes = get(f'tvshow/{showId}?season={seasonId}')['sections'][0]['content']
+	jepisodes = get('tvshow/{0}?season={1}'.format(showId, seasonId))['sections'][0]['content']
 	for jepisode in jepisodes:
 		episodes.append(
 			{
@@ -169,7 +170,7 @@ def list_season_episodes(showId, seasonId):
 
 def list_live_channels(id):
 	items = []
-	jitems = get(f'overview?category={id}')['liveTvs']
+	jitems = get('overview?category={0}'.format(id))['liveTvs']
 	for jitem in jitems:
 		items.append(
 			{
@@ -182,7 +183,7 @@ def list_live_channels(id):
 	return items
 
 def get_content_info(id):
-	resp = get(f'content/{id}/plays?acceptVideo=hls%2cdash%2cdrm-widevine', method='POST')
+	resp = get('content/{0}/plays?acceptVideo=hls%2cdash%2cdrm-widevine'.format(id), method='POST')
 	content = resp['content']
 	result = {
 		"id": id,
@@ -218,8 +219,8 @@ def get_media_type(typ):
 
 @plugin.route('/play_video/<id>')
 def play_video(id):
-	print(f'play_video {id}')
-	print(f'plugin.handle {plugin.handle}')
+	print('play_video {0}'.format(id))
+	print('plugin.handle {0}'.format(plugin.handle))
 	content = get_content_info(id)
 	if content['videoType'] == 'hls':
 		protocol = 'hls'
@@ -240,7 +241,7 @@ def play_video(id):
 		list_item.setContentLookup(False)
 		if protocol == 'mpd':
 			list_item.setMimeType('application/xml+dash')
-		list_item.setProperty('inputstream', 'inputstream.adaptive')
+		list_item.setProperty('inputstreamaddon', 'inputstream.adaptive')
 		list_item.setProperty('inputstream.adaptive.manifest_type', protocol)
 		if 'drm' in content:
 			list_item.setProperty('inputstream.adaptive.license_type', content['drm'])
