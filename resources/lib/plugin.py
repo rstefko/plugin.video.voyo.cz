@@ -204,7 +204,7 @@ def get_content_info(id):
 	return result
 
 def get_search_result(pattern):
-	resp = get(f'search?query={pattern}')
+	resp = get('search?query={0}'.format(pattern))
 	result = []
 	for rg in resp['resultGroups']:
 		for jres in rg['results']:
