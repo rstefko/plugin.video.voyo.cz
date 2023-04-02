@@ -260,7 +260,8 @@ def play_video(id):
 
 
 @plugin.route('/tvshow/<id>/season/<season>')
-def season(id, season):	
+def season(id, season):
+	xbmcplugin.setContent(plugin.handle, "episodes")
 	episodes = list_season_episodes(id, season)
 	for item in episodes:
 		title = item['title']
